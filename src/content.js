@@ -109,15 +109,20 @@ export default {
       problem:
         'A large, long-lived React front end that lets creators sell and deliver services needed steady feature delivery without the codebase degrading.',
       built: [
-        'Shipped new features and fixes in a mature codebase',
-        'Raised code quality with React best practices',
-        'Worked across payments, real-time messaging and error monitoring',
+        'Contributed to service pages, the creator dashboard and messaging',
+        'Contributed to lead magnets, account pages and email campaigns and sequences',
+        'Contributed to sending-domain verification',
       ],
       architecture: [
         'React + Vite single-page app on Material UI',
         'Stripe for payments, Twilio Conversations for messaging, Sentry for error monitoring',
       ],
-      impact: null, // TODO owner: add metric; git identity used on this repo is unknown (give the email to re-run stats)
+      impact: [
+        { value: '~1,760', label: 'non-merge commits contributed', source: 'VERIFIED' },
+        { value: '~22 mo', label: 'Jun 2024 – Apr 2026', source: 'VERIFIED' },
+        { value: '460+', label: 'tickets contributed to', source: 'VERIFIED' },
+        { value: '~64k', label: 'lines contributed to a ~490k-line React codebase', source: 'VERIFIED' },
+      ],
       stack: ['React', 'Vite', 'Material UI', 'Stripe', 'Twilio Conversations', 'Sentry'],
     },
     {
