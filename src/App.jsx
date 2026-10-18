@@ -1,24 +1,12 @@
 import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import content from './content.js';
+import { canRender3D } from './lib/canRender3D.js';
+import { useReducedMotion } from './hooks/useReducedMotion.js';
+import ProjectModal from './components/ProjectModal.jsx';
+import { ImpactList } from './components/Impact.jsx';
 
 const { site, about, experience, projects, skills, nav } = content;
 const Hero3D = lazy(() => import('./Hero3D.jsx'));
-
-function canRender3D() {
-  if (typeof window === 'undefined') return false;
-  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
-  const nav = window.navigator || {};
-  if (nav.connection && nav.connection.saveData) return false;
-  if (nav.hardwareConcurrency && nav.hardwareConcurrency < 4) return false;
-  if (nav.deviceMemory && nav.deviceMemory < 4) return false;
-  try {
-    const c = document.createElement('canvas');
-    if (!(c.getContext('webgl2') || c.getContext('webgl'))) return false;
-  } catch (e) {
-    return false;
-  }
-  return true;
-}
 
 function StaticOrb() {
   return (
@@ -110,10 +98,10 @@ function useTheme() {
   return [dark, setDark];
 }
 
-function useReveal() {
+function useReveal(reduced) {
   useEffect(() => {
-    const els = document.querySelectorAll('.reveal');
-    if (!('IntersectionObserver' in window)) {
+    const els = document.querySelectorAll('.reveal:not(.in)');
+    if (reduced || !('IntersectionObserver' in window)) {
       els.forEach((el) => el.classList.add('in'));
       return undefined;
     }
@@ -214,7 +202,7 @@ function Hero() {
       <div className="grid-bg pointer-events-none absolute inset-0" aria-hidden="true" />
       <div className="blob pointer-events-none absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-brand-500/30" aria-hidden="true" />
       <div className="blob pointer-events-none absolute right-0 top-40 h-60 w-60 rounded-full bg-accent-500/20" style={{ animationDelay: '-6s' }} aria-hidden="true" />
-      <div className="pointer-events-none absolute inset-x-0 top-16 h-[420px] opacity-40 lg:pointer-events-auto lg:inset-x-auto lg:right-[max(0px,calc((100vw-72rem)/2))] lg:top-24 lg:h-[560px] lg:w-[48%] lg:opacity-100">
+      <div className="hero-visual pointer-events-none absolute -right-28 top-20 h-[300px] w-[300px] opacity-[0.18] sm:-right-16 sm:h-[380px] sm:w-[380px] sm:opacity-25 lg:pointer-events-auto lg:right-[max(0px,calc((100vw-72rem)/2-2rem))] lg:top-28 lg:h-[520px] lg:w-[42%] lg:opacity-100">
         <HeroVisual />
       </div>
       <div className="container-x pointer-events-none relative pb-20 sm:pb-28 [&_a]:pointer-events-auto [&_dl]:pointer-events-auto">
@@ -225,7 +213,7 @@ function Hero() {
           </span>
           {site.status}
         </p>
-        <h1 className="mt-6 max-w-4xl lg:max-w-[58%] text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-6xl">
+        <h1 className="mt-6 max-w-4xl lg:max-w-[54%] text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-6xl">
           {site.headline[0]}{' '}
           <span className="bg-gradient-to-r from-brand-500 via-brand-400 to-accent-400 bg-clip-text text-transparent">{site.headline[1]}</span>
         </h1>
@@ -241,11 +229,11 @@ function Hero() {
             {site.other.label} <ArrowIcon className="h-4 w-4" />
           </a>
         </div>
-        <dl className="mt-16 grid max-w-3xl grid-cols-2 lg:max-w-[56%] gap-4 sm:grid-cols-4">
+        <dl className="mt-16 grid max-w-xl grid-cols-2 gap-3 sm:gap-4 lg:max-w-[50%]">
           {site.facts.map((f) => (
             <div key={f.label} className="card p-4">
               <dt className="text-xs text-slate-500 dark:text-slate-400">{f.label}</dt>
-              <dd className="mt-1 font-semibold text-slate-900 dark:text-white">{f.value}</dd>
+              <dd className="mt-1 whitespace-nowrap text-[15px] font-semibold text-slate-900 dark:text-white sm:text-base">{f.value}</dd>
             </div>
           ))}
         </dl>
@@ -322,7 +310,7 @@ function Experience() {
   );
 }
 
-function ProjectCard({ p }) {
+function ProjectCard({ p, onOpen }) {
   return (
     <article className="card group flex h-full flex-col p-6 hover:-translate-y-1 hover:border-brand-500/40 hover:shadow-xl hover:shadow-brand-500/10">
       <div className="flex items-start justify-between gap-3">
@@ -337,10 +325,15 @@ function ProjectCard({ p }) {
       </div>
       <h3 className="mt-4 text-lg font-semibold text-slate-900 dark:text-white">{p.title}</h3>
       {p.context && <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">{p.context}</p>}
-      <p className="mt-3 text-slate-600 dark:text-slate-300">{p.summary}</p>
-      {p.points && (
+      {p.role && (
+        <p className="mt-3 text-sm">
+          <span className="case-label">Role</span> <span className="text-slate-700 dark:text-slate-200">{p.role}</span>
+        </p>
+      )}
+      <p className="mt-3 line-clamp-3 text-slate-600 dark:text-slate-300">{p.problem}</p>
+      {p.built && (
         <ul className="mt-4 space-y-1.5 text-sm text-slate-600 dark:text-slate-300">
-          {p.points.map((x) => (
+          {p.built.slice(0, 3).map((x) => (
             <li key={x} className="flex gap-2">
               <span className="text-brand-500" aria-hidden="true">▹</span>
               <span>{x}</span>
@@ -348,14 +341,27 @@ function ProjectCard({ p }) {
           ))}
         </ul>
       )}
-      <ul className="mt-5 flex flex-wrap gap-1.5" aria-label="Technologies">
+      {p.impact && p.impact.length > 0 && (
+        <div className="mt-4">
+          <ImpactList items={p.impact.slice(0, 2)} compact />
+        </div>
+      )}
+      <ul className="mt-auto flex flex-wrap gap-1.5 pt-5" aria-label="Technologies">
         {p.stack.map((s) => (
           <li key={s} className="chip">{s}</li>
         ))}
       </ul>
-      <div className="mt-auto flex gap-4 pt-6">
+      <div className="flex flex-wrap items-center gap-4 border-t border-slate-200/70 pt-4 mt-5 dark:border-white/10">
+        <button
+          type="button"
+          onClick={() => onOpen(p)}
+          className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300"
+        >
+          Read case study <span className="sr-only">: {p.title}</span>
+          <ArrowIcon className="h-4 w-4" />
+        </button>
         {p.repo && (
-          <a href={p.repo} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-semibold text-brand-700 hover:underline dark:text-brand-300">
+          <a href={p.repo} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-600 hover:underline dark:text-slate-300">
             <GitHubIcon className="h-4 w-4" /> Source <span className="sr-only">for {p.title}</span>
           </a>
         )}
@@ -367,6 +373,7 @@ function ProjectCard({ p }) {
 function Projects() {
   const cats = useMemo(() => ['All', ...Array.from(new Set(projects.map((p) => p.category)))], []);
   const [cat, setCat] = useState('All');
+  const [open, setOpen] = useState(null);
   const shown = cat === 'All' ? projects : projects.filter((p) => p.category === cat);
   return (
     <section id="projects" className="section">
@@ -400,10 +407,11 @@ function Projects() {
         </p>
         <div className="mt-10 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {shown.map((p) => (
-            <ProjectCard key={p.title} p={p} />
+            <ProjectCard key={p.title} p={p} onOpen={setOpen} />
           ))}
         </div>
       </div>
+      <ProjectModal project={open} onClose={() => setOpen(null)} />
     </section>
   );
 }
@@ -461,7 +469,8 @@ function Contact() {
 }
 
 export default function App() {
-  useReveal();
+  const reduced = useReducedMotion();
+  useReveal(reduced);
   return (
     <>
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-brand-600 focus:px-4 focus:py-2 focus:text-white">
