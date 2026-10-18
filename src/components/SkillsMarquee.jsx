@@ -8,7 +8,7 @@ export default function SkillsMarquee() {
   const row = [...allSkills, ...allSkills];
 
   return (
-    <div className="relative mt-14 overflow-hidden" data-reveal aria-hidden={reduced ? undefined : true}>
+    <div className="relative mt-14 overflow-hidden" data-reveal>
       <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-slate-50/90 to-transparent dark:from-[#0b1020]/90" />
       <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-slate-50/90 to-transparent dark:from-[#0b1020]/90" />
       <div className={reduced ? 'flex flex-wrap justify-center gap-2 px-4' : 'marquee-track flex w-max gap-3'}>

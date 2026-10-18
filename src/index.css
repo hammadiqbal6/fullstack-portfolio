@@ -208,8 +208,15 @@ body.cursor-grow .cursor-ring {
   opacity: 1;
 }
 
+.split-char {
+  opacity: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   [data-reveal] {
+    opacity: 1;
+  }
+  .split-char {
     opacity: 1;
   }
   .marquee-track {
