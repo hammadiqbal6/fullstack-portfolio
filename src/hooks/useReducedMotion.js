@@ -1,27 +1,15 @@
 import { useEffect, useState } from 'react';
 
+const QUERY = '(prefers-reduced-motion: reduce)';
+
 export function useReducedMotion() {
-  const [reduced, setReduced] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches,
-  );
+  const [reduced, setReduced] = useState(() => typeof window !== 'undefined' && window.matchMedia(QUERY).matches);
   useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const mq = window.matchMedia(QUERY);
     const on = () => setReduced(mq.matches);
+    on();
     mq.addEventListener('change', on);
     return () => mq.removeEventListener('change', on);
   }, []);
   return reduced;
-}
-
-export function useFinePointer() {
-  const [fine, setFine] = useState(() =>
-    typeof window !== 'undefined' && window.matchMedia('(pointer: fine)').matches,
-  );
-  useEffect(() => {
-    const mq = window.matchMedia('(pointer: fine)');
-    const on = () => setFine(mq.matches);
-    mq.addEventListener('change', on);
-    return () => mq.removeEventListener('change', on);
-  }, []);
-  return fine;
 }

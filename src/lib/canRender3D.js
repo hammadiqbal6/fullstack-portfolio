@@ -1,3 +1,4 @@
+// Only render the WebGL hero when the device can afford it and the user has not asked for less motion.
 export function canRender3D() {
   if (typeof window === 'undefined') return false;
   if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
