@@ -1,7 +1,63 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Suspense, lazy, useEffect, useMemo, useRef, useState } from 'react';
 import content from './content.js';
 
 const { site, about, experience, projects, skills, nav } = content;
+const Hero3D = lazy(() => import('./Hero3D.jsx'));
+
+function canRender3D() {
+  if (typeof window === 'undefined') return false;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return false;
+  const nav = window.navigator || {};
+  if (nav.connection && nav.connection.saveData) return false;
+  if (nav.hardwareConcurrency && nav.hardwareConcurrency < 4) return false;
+  if (nav.deviceMemory && nav.deviceMemory < 4) return false;
+  try {
+    const c = document.createElement('canvas');
+    if (!(c.getContext('webgl2') || c.getContext('webgl'))) return false;
+  } catch (e) {
+    return false;
+  }
+  return true;
+}
+
+function StaticOrb() {
+  return (
+    <div className="relative grid h-full w-full place-items-center" aria-hidden="true">
+      <div className="absolute h-56 w-56 rounded-full bg-gradient-to-br from-brand-500 to-accent-500 opacity-70 blur-2xl sm:h-72 sm:w-72" />
+      <div className="relative h-40 w-40 rounded-full border border-white/30 bg-gradient-to-br from-brand-400/80 to-accent-500/80 shadow-2xl sm:h-56 sm:w-56" />
+      <div className="absolute h-64 w-64 rounded-full border border-brand-400/40 sm:h-80 sm:w-80" />
+    </div>
+  );
+}
+
+function HeroVisual() {
+  const ref = useRef(null);
+  const [enabled] = useState(canRender3D);
+  const [visible, setVisible] = useState(true);
+  const [mobile] = useState(() => window.matchMedia('(max-width: 768px)').matches);
+  useEffect(() => {
+    if (!enabled || !ref.current || !('IntersectionObserver' in window)) return undefined;
+    const io = new IntersectionObserver(([e]) => setVisible(e.isIntersecting), { threshold: 0 });
+    io.observe(ref.current);
+    const onVis = () => setVisible(document.visibilityState === 'visible');
+    document.addEventListener('visibilitychange', onVis);
+    return () => {
+      io.disconnect();
+      document.removeEventListener('visibilitychange', onVis);
+    };
+  }, [enabled]);
+  return (
+    <div ref={ref} className="h-full w-full">
+      {enabled ? (
+        <Suspense fallback={<StaticOrb />}>
+          <Hero3D active={visible} mobile={mobile} />
+        </Suspense>
+      ) : (
+        <StaticOrb />
+      )}
+    </div>
+  );
+}
 
 function GitHubIcon(props) {
   return (
@@ -158,7 +214,10 @@ function Hero() {
       <div className="grid-bg pointer-events-none absolute inset-0" aria-hidden="true" />
       <div className="blob pointer-events-none absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-brand-500/30" aria-hidden="true" />
       <div className="blob pointer-events-none absolute right-0 top-40 h-60 w-60 rounded-full bg-accent-500/20" style={{ animationDelay: '-6s' }} aria-hidden="true" />
-      <div className="container-x relative pb-20 sm:pb-28">
+      <div className="pointer-events-none absolute inset-x-0 top-16 h-[420px] opacity-40 lg:pointer-events-auto lg:inset-x-auto lg:right-[max(0px,calc((100vw-72rem)/2))] lg:top-24 lg:h-[560px] lg:w-[48%] lg:opacity-100">
+        <HeroVisual />
+      </div>
+      <div className="container-x pointer-events-none relative pb-20 sm:pb-28 [&_a]:pointer-events-auto [&_dl]:pointer-events-auto">
         <p className="inline-flex items-center gap-2 rounded-full border border-brand-500/30 bg-brand-500/10 px-3 py-1 text-xs font-medium text-brand-700 dark:text-brand-300">
           <span className="relative flex h-2 w-2">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
@@ -166,11 +225,11 @@ function Hero() {
           </span>
           {site.status}
         </p>
-        <h1 className="mt-6 max-w-4xl text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-6xl">
+        <h1 className="mt-6 max-w-4xl lg:max-w-[58%] text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white sm:text-6xl">
           {site.headline[0]}{' '}
           <span className="bg-gradient-to-r from-brand-500 via-brand-400 to-accent-400 bg-clip-text text-transparent">{site.headline[1]}</span>
         </h1>
-        <p className="mt-6 max-w-2xl text-lg leading-relaxed text-slate-600 dark:text-slate-300">{site.intro}</p>
+        <p className="mt-6 max-w-2xl text-lg leading-relaxed lg:max-w-[52%] text-slate-600 dark:text-slate-300">{site.intro}</p>
         <div className="mt-10 flex flex-wrap gap-3">
           <a href="#projects" className="btn-primary">
             {site.primaryCta}
@@ -182,7 +241,7 @@ function Hero() {
             {site.other.label} <ArrowIcon className="h-4 w-4" />
           </a>
         </div>
-        <dl className="mt-16 grid max-w-3xl grid-cols-2 gap-4 sm:grid-cols-4">
+        <dl className="mt-16 grid max-w-3xl grid-cols-2 lg:max-w-[56%] gap-4 sm:grid-cols-4">
           {site.facts.map((f) => (
             <div key={f.label} className="card p-4">
               <dt className="text-xs text-slate-500 dark:text-slate-400">{f.label}</dt>
