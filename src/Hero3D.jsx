@@ -1,0 +1,103 @@
+import { useMemo, useRef } from 'react';
+import { Canvas, useFrame } from '@react-three/fiber';
+import * as THREE from 'three';
+
+const INDIGO = '#6366f1';
+const FUCHSIA = '#d946ef';
+
+function Core({ pointer }) {
+  const group = useRef();
+  const inner = useRef();
+  useFrame((state, dt) => {
+    const g = group.current;
+    if (!g) return;
+    g.rotation.y += dt * 0.18;
+    g.rotation.x += dt * 0.05;
+    // ease toward pointer for a gentle parallax tilt
+    g.rotation.z = THREE.MathUtils.lerp(g.rotation.z, pointer.current.x * 0.35, 0.05);
+    g.position.y = THREE.MathUtils.lerp(g.position.y, pointer.current.y * 0.25, 0.05);
+    if (inner.current) {
+      const s = 1 + Math.sin(state.clock.elapsedTime * 1.4) * 0.04;
+      inner.current.scale.setScalar(s);
+    }
+  });
+  return (
+    <group ref={group}>
+      <mesh>
+        <icosahedronGeometry args={[1.6, 1]} />
+        <meshBasicMaterial color={INDIGO} wireframe transparent opacity={0.55} />
+      </mesh>
+      <mesh rotation={[0.6, 0.2, 0]}>
+        <torusGeometry args={[2.25, 0.012, 8, 160]} />
+        <meshBasicMaterial color={FUCHSIA} transparent opacity={0.7} />
+      </mesh>
+      <mesh rotation={[-0.9, 0.5, 0.3]}>
+        <torusGeometry args={[2.6, 0.008, 8, 160]} />
+        <meshBasicMaterial color={INDIGO} transparent opacity={0.45} />
+      </mesh>
+      <mesh ref={inner}>
+        <icosahedronGeometry args={[0.95, 4]} />
+        <meshStandardMaterial color={INDIGO} emissive={FUCHSIA} emissiveIntensity={0.35} roughness={0.25} metalness={0.6} flatShading />
+      </mesh>
+    </group>
+  );
+}
+
+function Particles({ count }) {
+  const ref = useRef();
+  const positions = useMemo(() => {
+    const arr = new Float32Array(count * 3);
+    for (let i = 0; i < count; i += 1) {
+      const r = 3 + Math.random() * 3.5;
+      const t = Math.random() * Math.PI * 2;
+      const p = Math.acos(2 * Math.random() - 1);
+      arr[i * 3] = r * Math.sin(p) * Math.cos(t);
+      arr[i * 3 + 1] = r * Math.sin(p) * Math.sin(t);
+      arr[i * 3 + 2] = r * Math.cos(p);
+    }
+    return arr;
+  }, [count]);
+  useFrame((_, dt) => {
+    if (ref.current) ref.current.rotation.y -= dt * 0.03;
+  });
+  return (
+    <points ref={ref}>
+      <bufferGeometry>
+        <bufferAttribute attach="attributes-position" count={count} array={positions} itemSize={3} />
+      </bufferGeometry>
+      <pointsMaterial size={0.035} color="#a5b4fc" transparent opacity={0.8} sizeAttenuation depthWrite={false} />
+    </points>
+  );
+}
+
+export default function Hero3D({ active = true, mobile = false }) {
+  const pointer = useRef({ x: 0, y: 0 });
+  return (
+    <div
+      className="h-full w-full"
+      onPointerMove={(e) => {
+        const r = e.currentTarget.getBoundingClientRect();
+        pointer.current.x = ((e.clientX - r.left) / r.width) * 2 - 1;
+        pointer.current.y = -(((e.clientY - r.top) / r.height) * 2 - 1);
+      }}
+      onPointerLeave={() => {
+        pointer.current.x = 0;
+        pointer.current.y = 0;
+      }}
+    >
+      <Canvas
+        frameloop={active ? 'always' : 'never'}
+        dpr={mobile ? [1, 1.25] : [1, 1.75]}
+        camera={{ position: [0, 0, 6.5], fov: 45 }}
+        gl={{ antialias: !mobile, alpha: true, powerPreference: 'low-power' }}
+        aria-hidden="true"
+      >
+        <ambientLight intensity={0.5} />
+        <pointLight position={[4, 4, 4]} intensity={40} color="#ffffff" />
+        <pointLight position={[-4, -2, 2]} intensity={25} color={FUCHSIA} />
+        <Core pointer={pointer} />
+        <Particles count={mobile ? 250 : 700} />
+      </Canvas>
+    </div>
+  );
+}
